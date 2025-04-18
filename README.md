@@ -2,7 +2,7 @@
 
 # Overview
 
-Esta solução responde ao Case de Machine Learning Engineer –  PicPay.
+Esta solução responde ao Case Machine Learning  Engineer –  PicPay.
 
 ## O que o case pedia
 
@@ -95,7 +95,7 @@ Implementado em FastAPI (src/api/main.py):
 
 O contêiner expõe porta 8080
 
-## 1. clone o repo
+## 1. Clone o repo
 
 ```
 git clone https://github.com/Estefano00/case-picpay.git
@@ -103,13 +103,13 @@ git clone https://github.com/Estefano00/case-picpay.git
 cd case-picpay
 ```
 
-## 2. construa a imagem
+## 2. Construa a imagem
 
 ```
 docker build -t picpay-mle-api .
 ```
 
-## 3. rode
+## 3. Rode
 
 docker run -p 8080:8080
 
