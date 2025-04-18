@@ -3,7 +3,7 @@
 
 # Overview
 
-Esta solução responde ao Case Machine Learning  Engineer –  PicPay.
+Esta solução responde ao Case de Machine Learning Engineer –  PicPay.
 
 ## O que o case pedia
 
