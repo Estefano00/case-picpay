@@ -1,4 +1,3 @@
-
 # Case Machine Learning Engineer
 
 # Overview
@@ -26,21 +25,20 @@ Código majoritariamente orientado a objetos, métodos e variáveis em portuguê
 ## Estrutura do repositório
 
 ```
-├── src/            
+├── src/          
 │   ├── main.py   
-├── notebook/          
-│   ├── Notebook.ipynb          
+├── notebook/        
+│   ├── Notebook.ipynb        
 │   ├── modelo.pkl   
-├── docs/          
+├── docs/        
 │   ├── desenho.png 
-├── tests/          
-│   ├── notebook-testes.ipynb          
-│   ├── modelo.pkl            
+├── tests/        
+│   ├── notebook-testes.ipynb        
+│   ├── modelo.pkl          
 ├── requirements.txt
 └── Dockerfile
 
 ```
-
 
 ## Enriquecimento
 
@@ -95,7 +93,7 @@ Implementado em FastAPI (src/api/main.py):
 
 # Implantação via Docker
 
-O contêiner expõe porta 8080 
+O contêiner expõe porta 8080
 
 ## 1. Clone o repo
 
@@ -105,7 +103,6 @@ git clone https://github.com/Estefano00/case-picpay.git
 cd case-picpay
 ```
 
-
 ## 2. Construa a imagem
 
 ```
@@ -114,7 +111,7 @@ docker build -t picpay-mle-api .
 
 ## 3. Rode
 
-docker run -p 8080:8080 
+docker run -p 8080:8080
 
 ## Carrega modelo
 
@@ -133,7 +130,6 @@ curl -H "Content-Type: application/json" \
 
     http://localhost:8080/model/predict/
 ```
-
 
 ## Histórico
 
@@ -162,6 +158,8 @@ curl http://localhost:8080/health
 ![1745012782181](image/README/1745012782181.png)
 
 # Desenho
+
+![1745019670450](image/README/1745019670450.png)
 
 # Documentação
 
@@ -285,7 +283,6 @@ Pipeline orquestrador; chama, em ordem:
 Retorna o DataFrame enriquecido; imprime mensagens em cada etapa para facilitar depuração.
 
 ---
-
 
 ## Classe Perguntas
 
@@ -423,7 +420,6 @@ A classe encapsula todas as queries de análise pedidas no case. Ela recebe um �
 * Itera de 1 a 17, faz getattr(self, f"pergunta_{i}") e executa.
   Facilita rodar todo o questionário em um único comando.
 
-
 ## Classe Pergunta_Final
 
 A classe isola a última tarefa do case: listar os 5 voos com maior atraso na chegada usando o DataFrame que já contém todas as colunas enriquecidas (GMT, ventos, horários reais).
@@ -519,7 +515,6 @@ A classe organiza todo o pipeline de modelagem que relaciona a velocidade do ven
   5. salvar_modelo
 * Retorna o objeto modelo treinado, facilitando uso imediato em memória.
 
-
 # Perguntas
 
 ### Pergunta 1
@@ -544,7 +539,7 @@ Resposta: 12.58 minutos
 
 **Quais são os 5 aeroportos com maior número de pousos?**
 
-Resposta: 
+Resposta:
 
 | dest | n Pousos |
 | ---- | -------- |
@@ -657,7 +652,6 @@ Resposta:
 
 [(1, 871.1), (2, 891.1), (3, 930.1), (4, 944.3), (5, 928.9), (6, 941.4), (7, 949.2), (8, 946.0), (9, 919.1), (10, 931.9), (11, 908.9), (12, 907.6)]
 
-
 | Mês | Percentual |
 | ---- | ---------- |
 | 1    | 871.1      |
@@ -691,10 +685,6 @@ Resposta:
 
 Resposta: EWR → ORD , JFK → LAX,  LGA → ATL
 
-
-
-
-
 ### Pergunta Final
 
 🔶 6 voos com maior atraso na chegada:
@@ -705,5 +695,3 @@ Resposta: EWR → ORD , JFK → LAX,  LGA → ATL
 4. JFK→SFO |  Hor. previsto: 1845  | Atraso decolagem: 1014.0 min  | Vento origem: 15.5 m/s  | Chegada real: 2013-09-21 13:48:00  | Atraso chegada: 1007.0 min  | Vento destino: 14.2 m/s
 5. JFK→CVG |  Hor. previsto: 1600  | Atraso decolagem: 1005.0 min  | Vento origem: 11.6 m/s  | Chegada real: 2013-07-23 10:21:00  | Atraso chegada: 989.0 min  | Vento destino: 9.7 m/s
 6. JFK→TPA |  Hor. previsto: 1900  | Atraso decolagem: 960.0 min  | Vento origem: 9.4 m/s  | Chegada real: 2013-04-11 13:19:00  | Atraso chegada: 931.0 min  | Vento destino: 17.8 m/s
-
-## Enriquecimento de Base
