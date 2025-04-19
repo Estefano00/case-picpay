@@ -7,7 +7,7 @@ Esta solução responde ao Case de Machine Learning Engineer –  PicPay.
 ## O que o case pedia
 
 1. ETL + enriquecimento em Spark de uma base de voos (≈ 336 k linhas).
-2. 17 queries analíticas em PySpark.
+2. 17 queries analíticas +  1 query final em PySpark.
 3. Modelo .pkl que previsse atraso e fosse carregável por uma API.
 4. API FastAPI conteinerizada com rotas /model/predict, /model/load, /model/history e /health.
 5. Arquitetura simples em nuvem e testes unitários.
@@ -15,10 +15,10 @@ Esta solução responde ao Case de Machine Learning Engineer –  PicPay.
 ## Ferramentas & referências
 
 * Ambiente de desenvolvimento → Google Colab.
-* Big‑data → pyspark 3.5 • requests • pandas.
-* Modelagem → scikit‑learn (+ joblib p/ .pkl).
+* Big‑data → pyspark 3.5 e requests.
+* Modelagem → scikit‑learn e pandas +  joblib p/ .pkl.
 * Serviço → fastapi + uvicorn.
-* Apoio conceitual: Spark – The Definitive Guide (Matei Zaharia, Bill Chambers).
+* Apoio conceitual: **Spark – The Definitive Guide** (Matei Zaharia, Bill Chambers).
 
 Código majoritariamente orientado a objetos, métodos e variáveis em português com comentários enxutos para facilitar leitura.
 
@@ -48,21 +48,25 @@ Classe EnriquecedorVentos executa o pipeline:
 | ---------------------------- | ------------------------------------------------------------------ |
 | 1 coletar_aeroportos         | extrai todos os IATA de origin e dest.                             |
 | 2 buscar_coordenadas         | chama AirportDB para lat,lon.                                      |
-| 3 baixar_vento               | usa Open‑Meteo Archive ⇢ série horária de windspeed_10m + GMT. |
+| 3 baixar_vento               | usa Open‑Meteo Archive -> série horária de windspeed_10m + GMT. |
 | 4 adicionar_gmt              | adiciona gmt_origin, gmt_dest via broadcast dict.                  |
 | 5 calcular_partida_chegada   | calcula dep_real & arr_real (manipulação de timezone).           |
 | 6 criar_arr_redondo          | arredonda chegada p/ blocos de 60 min (regras de 30 min).          |
 | 7 adicionar_velocidade_vento | cria wind_origin e wind_dest.                                      |
 | 8 salvar_csv                 | grava base_enriquecida.csv.                                        |
 
-Desafios: limites de API, fuse‑horário, manter 100 % das linhas (nulos quando faltam dados). Todos resolvidos com retry, try/except e UDFs que retornam None.
+### Desafios
+
+1. Limites da rígidos da API Weatherbit (1500 requisições para uma base de mais de 330k de entradass)
+2. Fuso‑horário, obter o fuso horário era fundamentamental para obter o horário local e assim obter a velocidade dos ventos correta
+3. Arredondar valores para intervalos de uma hora, como os que são fornecidos pela API AIrportDB
+4. Manter 100 % das linhas (nulos quando faltam dados). Todos resolvidos com retry, try/except e UDFs que retornam None.
 
 ---
 
 ## Perguntas
 
-Classe Perguntas contém 17 métodos (pergunta_1 … pergunta_17) que respondem exatamente às questões do enunciado usando operações PySpark básicas (groupBy, agg, janelas).
-executar_todas() imprime todas de uma vez.
+Classe Perguntas contém 17 métodos (pergunta_1 … pergunta_17) que respondem exatamente às questões do enunciado usando operações PySpark básicas (groupBy, agg, janelas). executar_todas() imprime todas de uma vez.
 
 ---
 
@@ -80,7 +84,7 @@ Classe Treino
 
 ## Sistema (API)
 
-Implementado em FastAPI (src/api/main.py):
+Implementado em FastAPI (src/main.py):
 
 | Endpoint        | Método | Função                                                                                     |
 | --------------- | ------- | -------------------------------------------------------------------------------------------- |
@@ -515,6 +519,145 @@ A classe organiza todo o pipeline de modelagem que relaciona a velocidade do ven
   5. salvar_modelo
 * Retorna o objeto modelo treinado, facilitando uso imediato em memória.
 
+## app/main.py (API FastAPI)
+
+A seguir, uma descrição item‑a‑item do arquivo main.py, apontando a finalidade de cada bloco e de cada função/endpoint.
+
+### Imports e constantes
+
+* FastAPI, UploadFile, File, HTTPException – componentes básicos do framework FastAPI.
+* BaseModel (Pydantic) – define esquemas de entrada/saída validados.
+* joblib, io, json, uuid, numpy, Path – utilidades para carregar modelo .pkl, ler/gravar histórico e processar números.
+* PASTA_STORAGE – diretório local (storage/) onde o contêiner persiste artefatos. Criado na inicialização (mkdir(exist_ok=True)).
+
+Arquivos‑chave:
+
+* storage/model.pkl      # modelo serializado
+* storage/history.jsonl  # histórico de predições em formato JSON‑Lines
+
+### Instância da aplicação
+
+```
+app = FastAPI(title="API Previsão de Atraso")
+```
+
+Cria a aplicação FastAPI com um título amigável para a documentação Swagger (/docs).
+
+---
+
+### Estado global
+
+```
+modelo_memoria = None
+```
+
+* Mantém na RAM o objeto modelo scikit‑learn já carregado, evitando re‑leitura a cada requisição. Se o processo reiniciar, será refeito a partir de storage/model.pkl.
+
+---
+
+**Schemas Pydantic**
+
+```
+class EntradaPredicao(BaseModel):
+
+    wind_origin: float
+```
+
+
+Define o JSON de entrada para /model/predict/.
+
+```
+class SaidaPredicao(BaseModel):
+
+    atraso_previsto: float
+```
+
+
+Define o formato de saída – automaticamente refletido na documentação interativa.
+
+---
+
+### Funções utilitárias de histórico
+
+* append_historico(registro)
+  Abre history.jsonl no modo “append” e grava uma linha JSON. Garante que o log persiste mesmo se o contêiner cair.
+* ler_historico()
+  Lê o arquivo linha a linha, converte cada linha JSON em dicionário e devolve uma lista. Se o arquivo não existir, retorna lista vazia.
+
+---
+
+### Endpoints
+
+#### /health/ (GET)
+
+```
+def health():
+
+    return {"status": "ok"}
+```
+
+
+Resposta rápida para probes de vida (Kubernetes, Load Balancer, etc.).
+
+---
+
+#### /model/load/ (POST)
+
+async def carregar_modelo(arquivo: UploadFile = File(...)):
+
+* Fluxo
+
+  1. Valida se o upload termina em .pkl; caso contrário retorna 400.
+  2. await arquivo.read() lê o arquivo em bytes.
+  3. Tenta joblib.load(BytesIO(...)) para desserializar; erros levantam 400 Bad Request.
+  4. Salva o mesmo conteúdo em disco (storage/model.pkl).
+  5. Atualiza a variável global modelo_memoria.
+  6. Devolve JSON {"status": "modelo carregado e salvo"}.
+* Uso – deve ser a primeira chamada após subir a API ou sempre que quiser trocar o modelo em produção.
+
+---
+
+#### /model/predict/ (POST)
+
+def prever(payload: EntradaPredicao):
+
+* Garantia de modelo
+  Se modelo_memoria é None:
+
+  * tenta carregar de storage/model.pkl;
+  * caso não exista ainda, devolve 503 Service Unavailable.
+* Predição
+* Obtém o valor de wind_origin e passa como array 2‑D para predict.
+* Converte para float (garante serialização JSON‑safe).
+* Registro histórico
+* Monta um registro com id UUID, entrada e saida.
+* Chama append_historico para gravar linha JSON.
+
+Retorno
+
+{"atraso_previsto": `<valor>`}
+
+---
+
+#### /model/history/ (GET)
+
+```
+def historico():
+
+    return ler_historico()
+```
+
+Devolve todas as predições feitas até o momento (lista de dicionários).
+ Em produção, paginar o resultado seria recomendado para grandes volumes.
+
+---
+
+#### Observações de operação
+
+* Persistência – montar storage/ como volume Docker garante que o modelo e o histórico sobrevivem a recreações do contêiner.
+* Segurança – para uso público, proteger /model/load/ com autenticação.
+* Escalabilidade – o objeto modelo_memoria é carregado por worker (processo). Usar --workers N no Uvicorn cria cópias isoladas do modelo em cada processo.
+
 # Perguntas
 
 ### Pergunta 1
@@ -687,7 +830,7 @@ Resposta: EWR → ORD , JFK → LAX,  LGA → ATL
 
 ### Pergunta Final
 
-🔶 6 voos com maior atraso na chegada:
+🔶 6 voos com maior atraso na chegada (originalmente eram 5 mas o primeiro aeroporto de destino não foi encontrado pela api ):
 
 1. JFK→HNL |  Hor. previsto: 900  | Atraso decolagem: 1301.0 min  | Vento origem: 3.6 m/s  | Chegada real: None  | Atraso chegada: 1272.0 min  | Vento destino: None m/s **(O areroporto HNL não foi encontrado pela API)**
 2. JFK→CMH |  Hor. previsto: 1935  | Atraso decolagem: 1137.0 min  | Vento origem: 7.1 m/s  | Chegada real: 2013-06-16 15:11:00  | Atraso chegada: 1127.0 min  | Vento destino: 19.6 m/s
