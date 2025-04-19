@@ -25,16 +25,17 @@ Código majoritariamente orientado a objetos, métodos e variáveis em portuguê
 ## Estrutura do repositório
 
 ```
-├── src/          
+├── src/  
 │   ├── main.py   
-├── notebook/        
-│   ├── Notebook.ipynb        
+├── notebook/  
+│   ├── Notebook.ipynb  
 │   ├── modelo.pkl   
-├── docs/        
+│   ├── airports-database.csv   
+├── docs/  
 │   ├── desenho.png 
-├── tests/        
-│   ├── notebook-testes.ipynb        
-│   ├── modelo.pkl          
+├── tests/  
+│   ├── notebook-testes.ipynb  
+│   ├── modelo.pkl  
 ├── requirements.txt
 └── Dockerfile
 
